@@ -9,31 +9,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [
-          windows-latest,
-          # macos-latest, # cppfront is currently broken on AppleClang
-          ubuntu-latest,
-        ]
+        os: [ windows-2022, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     steps:
       # System set-up
       - uses: actions/checkout@v3
         with:
           submodules: true
-      - uses: ilammy/msvc-dev-cmd@v1
-      - uses: lukka/get-cmake@latest
 
-      - name: Install GCC 11
+      - uses: lukka/get-cmake@latest
+      
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: startsWith(matrix.os, 'windows')
+        
+      - name: Install GCC 13 and build-essential 
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-11 g++-11
-          echo "CC=gcc-11" >> $GITHUB_ENV
-          echo "CXX=g++-11" >> $GITHUB_ENV
+          sudo apt-get install -y gcc-13 g++-13 build-essential
+          echo "CC=gcc-13" >> $GITHUB_ENV
+          echo "CXX=g++-13" >> $GITHUB_ENV
 
       # Main cppfront library
       - name: Configure cppfront
-        run: cmake -G Ninja -S . -B build/cppfront -DCMAKE_BUILD_TYPE=Release
+        run: cmake -G Ninja -S . -B build/cppfront -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23
       - name: Build cppfront
         run: cmake --build build/cppfront --config Release
       - name: Install cppfront locally
@@ -42,8 +41,7 @@ jobs:
       # Regression tests
       - name: Configure regression tests
         run: >
-          cmake -G Ninja -S regression-tests -B build/regression-tests -DCMAKE_BUILD_TYPE=Release 
-          "-DCMAKE_PREFIX_PATH=${{github.workspace}}/_local"
+          cmake -G Ninja -S regression-tests -B build/regression-tests -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23 "-DCMAKE_PREFIX_PATH=${{github.workspace}}/_local"
       - name: Build regression tests
         run: cmake --build build/regression-tests --config Release
       - name: Run regression tests
@@ -53,8 +51,7 @@ jobs:
       # Example
       - name: Configure example
         run: >
-          cmake -G Ninja -S example -B build/example -DCMAKE_BUILD_TYPE=Release
-          "-DCMAKE_PREFIX_PATH=${{github.workspace}}/_local"
+          cmake -G Ninja -S example -B build/example -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23 "-DCMAKE_PREFIX_PATH=${{github.workspace}}/_local"
       - name: Build example
         run: cmake --build build/example --config Release
       - name: Run example
